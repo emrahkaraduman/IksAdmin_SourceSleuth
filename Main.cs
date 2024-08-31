@@ -13,16 +13,16 @@ public class Main : BasePlugin, IPluginConfig<PluginConfig>
     public override string ModuleName => "IksAdmin_SourceSleuth";
     public override string ModuleVersion => "1.0.0";
     public override string ModuleAuthor => "iks__";
-    
+
     private readonly PluginCapability<IIksAdminApi> _adminPluginCapability = new("iksadmin:core");
     public static IIksAdminApi? AdminApi;
     public override void OnAllPluginsLoaded(bool hotReload)
     {
         AdminApi = _adminPluginCapability.Get();
     }
-    
-    public PluginConfig Config { get; set; }
-    
+
+    public PluginConfig Config { get; set; } = null!;
+
     public void OnConfigParsed(PluginConfig config)
     {
         Config = config;
@@ -35,7 +35,13 @@ public class Main : BasePlugin, IPluginConfig<PluginConfig>
         if (player.IsBot || !player.IsValid || player.AuthorizedSteamID == null) return HookResult.Continue;
 
         var playerInfo = player.GetInfo();
-        
+
+        // Check if the player's SteamID is in the whitelist
+        if (Config.Whitelist.Contains(playerInfo.SteamId.SteamId64.ToString()))
+        {
+            return HookResult.Continue; // Skip processing for whitelisted players
+        }
+
         Task.Run(async () =>
         {
             var oldBan = await GetLastPlayerIpBan(playerInfo);
@@ -71,7 +77,7 @@ public class Main : BasePlugin, IPluginConfig<PluginConfig>
                 }
             });
         });
-        
+
         return HookResult.Continue;
     }
 
@@ -99,8 +105,8 @@ public class Main : BasePlugin, IPluginConfig<PluginConfig>
             id as id
             from iks_bans
             where ip LIKE @ip and (end > @timeNow or time = 0) and Unbanned = 0 and (server_id = @server_id or server_id = '')
-            ", new {ip = $"%{player.IpAddress.Split(":")[0]}%", timeNow = DateTimeOffset.UtcNow.ToUnixTimeSeconds(), server_id = AdminApi.Config.ServerId});
-            
+            ", new { ip = $"%{player.IpAddress.Split(":")[0]}%", timeNow = DateTimeOffset.UtcNow.ToUnixTimeSeconds(), server_id = AdminApi.Config.ServerId });
+
             if (ban != null)
             {
                 if (ban.ServerId.Trim() != "" && ban.ServerId != AdminApi.Config.ServerId)
@@ -108,7 +114,7 @@ public class Main : BasePlugin, IPluginConfig<PluginConfig>
                     return null;
                 }
             }
-            
+
             return ban;
         }
         catch (Exception e)
@@ -118,6 +124,6 @@ public class Main : BasePlugin, IPluginConfig<PluginConfig>
 
         return null;
     }
-    
+
 
 }
