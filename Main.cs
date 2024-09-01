@@ -36,10 +36,10 @@ public class Main : BasePlugin, IPluginConfig<PluginConfig>
 
         var playerInfo = player.GetInfo();
 
-        // Check if the player's SteamID is in the whitelist
-        if (Config.Whitelist.Contains(playerInfo.SteamId.SteamId64.ToString()))
+        if (Config.WhitelistSteamIDs.Contains(playerInfo.SteamId.SteamId64.ToString()) ||
+            Config.WhitelistIPAddresses.Contains(playerInfo.IpAddress.Split(":")[0]))
         {
-            return HookResult.Continue; // Skip processing for whitelisted players
+            return HookResult.Continue; 
         }
 
         Task.Run(async () =>
